@@ -1,0 +1,50 @@
+swagger: '2.0'
+info:
+  title: Echo Test REST API
+  version: 1.0.0
+schemes:
+  - https
+host: example-project-317294.appspot.com
+x-google-management:
+  metrics:
+    - name: read-request-rate
+      displayName: Read Request Rate
+      valueType: INT64
+      metricKind: DELTA
+  quota:
+    limits:
+      - name: read-request-rate-limit
+        metric: read-request-rate
+        unit: 1/min/{project}
+        values:
+          STANDARD: 10
+definitions:
+  echoMessage:
+    type: object
+    properties:
+      message:
+        type: string
+        description: Echo message.
+paths:
+  "/echo":
+    get:
+      description: Echo back a given message.
+      operationId: echo
+      produces:
+        - "application/json"
+      responses:
+        200:
+          description: "Echo"
+          schema:
+            $ref: "#/definitions/echoMessage"
+      parameters:
+        - description: Message to echo
+          in: query
+          name: message
+          required: true
+          type: string
+      x-google-quota:
+        metricCosts:
+          read-request-rate: 1
+      security:
+        - api_key: []
