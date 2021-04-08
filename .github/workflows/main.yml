@@ -1,0 +1,50 @@
+name: ESP Quota Limit Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      requestCount:
+        description: Request number to test
+        required: false
+        default: "1000"
+      secondsToWait:
+        description: Seconds to wait after 429
+        required: false
+        default: "61"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: example-project-317294
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Deploy endpoints service
+        run: gcloud endpoints services deploy ./echoApi/spec.yaml
+
+      - name: Set esp credentials
+        run: |
+          mkdir credentials
+          echo "${{ secrets.ESP_GCP_CREDENTIALS }}" | base64 -d > credentials/service-account.json
+
+      - name: Set up env file
+        run: |
+          touch .env
+          echo "API_KEY=${{ secrets.API_KEY }}" >> .env
+          echo "AUTH_BEARER_TOKEN=${{ secrets.AUTH_BEARER_TOKEN }}" >> .env
+          echo "REQUEST_COUNT=${{ github.event.inputs.requestCount }}" >> .env
+          echo "SECONDS_TO_WAIT=${{ github.event.inputs.secondsToWait }}" >> .env
+
+      - name: Run esp v1 test
+        run: docker-compose -f ./docker-compose.espv1.yml up --abort-on-container-exit --build
+
+      - name: Run esp v2 test
+        run: docker-compose up --abort-on-container-exit --build
