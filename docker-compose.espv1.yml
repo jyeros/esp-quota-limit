@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+  echo-api:
+    image: echo-api
+    build:
+      context: ./echoApi
+      dockerfile: ./Dockerfile
+    restart: on-failure
+  client-test:
+    image: client-test
+    build:
+      context: ./clientTest
+      dockerfile: ./Dockerfile
+    command: >
+      bash -c 
+      'while [[ "$$(curl --connect-timeout 5 -s -o /dev/null -w ''%{http_code}'' esp:8082/echo)" != "200" ]];
+        do echo ..;
+        sleep 5;
+      done;
+      echo backend is up;
+      npm run start'
+    env_file: .env
+    environment:
+      BASE_API_URL: http://esp:8082
+    depends_on: [esp]
+  esp:
+    image: gcr.io/endpoints-release/endpoints-runtime:1
+    command: >
+      --service=example-project-317294.appspot.com 
+      --rollout_strategy=managed
+      --http_port=8082
+      --backend=echo-api
+      --service_account_key=/esp/service-account.json
+    volumes:
+      - ./credentials:/esp
